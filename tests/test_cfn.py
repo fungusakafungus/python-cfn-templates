@@ -15,9 +15,9 @@ class TestCFN(unittest2.TestCase):
         self.maxDiff=None
 
     def assert_json(self, actual, expected):
-        actual = json.loads(json.dumps(actual, cls=ResourceEncoder, indent=2))
-        expected = json.loads(json.dumps(expected))
-        self.assertEqual(expected, actual)
+        actual = json.dumps(actual, cls=ResourceEncoder, indent=2)
+        expected = json.dumps(expected, indent=2)
+        self.assertEqual(unicode(expected), unicode(actual))
 
     def test_resource_creation(self):
         r = Resource1()
@@ -40,11 +40,27 @@ class TestCFN(unittest2.TestCase):
         r1 = ResourceWithProperties(prop1=1)
         self.assert_json(r1, {'Type':'ResourceWithProperties', 'Properties': {'prop1':1}})
 
+    def test_setting_properties(self):
+        r1 = ResourceWithProperties()
+        r1.prop1 = 1
+        self.assert_json(r1, {'Type':'ResourceWithProperties', 'Properties': {'prop1':1}})
+
     def test_stack_creation(self):
         r1 = ResourceWithProperties(prop1=1)
         stack = Stack(r1)
         self.assert_json(stack, {'Resources': { 'ResourceWithProperties1':{ 'Type':
             'ResourceWithProperties', 'Properties': {'prop1': 1} } } })
+
+    def test_autonaming(self):
+        r1 = Resource1()
+        r2 = Resource1()
+        r3 = Resource1()
+        stack = Stack(r1, r2, r3)
+        self.assert_json(stack, {'Resources': {
+            'Resource11':{ 'Type': 'Resource1'},
+            'Resource12':{ 'Type': 'Resource1'},
+            'Resource13':{ 'Type': 'Resource1'},
+            }})
 
     def test_stack_with_dependencies_in_properties(self):
         r1 = ResourceWithProperties()
@@ -66,19 +82,42 @@ class TestCFN(unittest2.TestCase):
                     })
 
     def test_stack_with_dependencies_in_attributes(self):
-        r1 = ResourceWithAttributes()
-        r2 = ResourceWithProperties()
+        r1 = ResourceWithAttributes('r1')
+        r2 = ResourceWithProperties('r2')
         r2.prop1 = r1.attr1
         stack = Stack(r1, r2)
         self.assert_json(stack,
             {'Resources': {
-                'ResourceWithAttributes1':{
+                'r1':{
                     'Type': 'ResourceWithAttributes'
                     },
-                'ResourceWithProperties2':{
+                'r2':{
                     'Type': 'ResourceWithProperties',
                     'Properties': {
-                        'prop1': {'Fn::GetAttr': ['ResourceWithProperties1', 'attr1']}
+                        'prop1': {'Fn::GetAttr': ['r1', 'attr1']}
+                        }
+                    },
+                }
+                })
+
+    def test_resource_format(self):
+        r1 = Resource1('r1')
+        self.assertEquals('{r1}','{0}'.format(r1))
+
+    def test_join_in_property(self):
+        r1 = Resource1('r1')
+        r2 = ResourceWithProperties('r2')
+        r2.prop1 = 'prefix{0}'.format(r1)
+        stack = Stack(r1, r2)
+        self.assert_json(stack,
+            {'Resources': {
+                'r1':{
+                    'Type': 'Resource1'
+                    },
+                'r2':{
+                    'Type': 'ResourceWithProperties',
+                    'Properties': {
+                        'prop1': {'Fn::Join': ['', ['prefix', {'Ref': 'r1'}]]}
                         }
                     },
                 }
