@@ -7,13 +7,22 @@ class ResourceEncoder(JSONEncoder):
     def default(self, o):
         return  o.to_json() if getattr(o, 'to_json', None) else JSONEncoder.default(self, o)
 
-class Stack(object):
+class ResourceCollection(object):
     def __init__(self, *resources):
         self.resources = {}
+        dicts = [d for d in resources if isinstance(d,dict)]
+        resources = [r for r in resources if isinstance(r,Resource)]
+        for arg in dicts:
+            for name,resource in arg.items():
+                if not isinstance(resource, Resource):
+                    continue
+                if not resource.name:
+                    resource.name = name
+                resources.append(resource)
         for r in resources:
             if not r.name:
                 for i in xrange(1000):
-                    r.name = r.__class__.__name__ + str(i + 1)
+                    r.name = r.type() + str(i + 1)
                     if r.name not in self.resources:
                         break
             self.resources[r.name] = r
@@ -83,6 +92,13 @@ class Resource(object):
                 setattr(self, k, Property(resource=self, value=v))
         self._initialized=True
 
+    def type(self):
+        parts = []
+        if self.__module__:
+            parts.extend(self.__module__.split('.'))
+        parts.append(self.__class__.__name__)
+        return '::'.join(parts)
+
     def to_json(self):
         properties=dict((k,getattr(self,k)) for k in self._property_names)
         properties=dict((k,v) for (k,v) in properties.items() if v.value)
@@ -95,7 +111,7 @@ class Resource(object):
         attributes=dict((k,getattr(self,k)) for k in self._attribute_names)
         attributes=dict((k,v) for (k,v) in attributes.items() if v.value)
 
-        result = dict(Type=self.__class__.__name__, **attributes)
+        result = dict(Type=self.type(), **attributes)
         if properties:
             result.update(Properties=properties)
         return result
@@ -109,12 +125,9 @@ class Resource(object):
             else:
                 return object.__setattr__(self, name, value)
 
+    # hackish, very hackish
     def __format__(self, format_string):
         return '{{{0}}}'.format(self.name)
-
-
-
-
 
     def ref(self):
         return {'Ref':self.name}

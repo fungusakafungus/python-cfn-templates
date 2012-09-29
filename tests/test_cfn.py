@@ -2,13 +2,20 @@ from cfn import *
 import json
 #from nose.tools import *
 import unittest2
-class Resource1(Resource): pass
+class Resource1(Resource):
+    __module__=''
 
 class ResourceWithProperties(Resource):
     prop1=Property()
+    __module__=''
 
 class ResourceWithAttributes(Resource):
     attr1=Attribute()
+    __module__=''
+
+class ResourceWithMetadata(Resource):
+    Metadata=Attribute()
+    __module__=''
 
 class TestCFN(unittest2.TestCase):
     def setUp(self):
@@ -47,7 +54,7 @@ class TestCFN(unittest2.TestCase):
 
     def test_stack_creation(self):
         r1 = ResourceWithProperties(prop1=1)
-        stack = Stack(r1)
+        stack = ResourceCollection(r1)
         self.assert_json(stack, {'Resources': { 'ResourceWithProperties1':{ 'Type':
             'ResourceWithProperties', 'Properties': {'prop1': 1} } } })
 
@@ -55,7 +62,7 @@ class TestCFN(unittest2.TestCase):
         r1 = Resource1()
         r2 = Resource1()
         r3 = Resource1()
-        stack = Stack(r1, r2, r3)
+        stack = ResourceCollection(r1, r2, r3)
         self.assert_json(stack, {'Resources': {
             'Resource11':{ 'Type': 'Resource1'},
             'Resource12':{ 'Type': 'Resource1'},
@@ -66,7 +73,7 @@ class TestCFN(unittest2.TestCase):
         r1 = ResourceWithProperties()
         r2 = ResourceWithProperties()
         r1.prop1=r2
-        stack = Stack(r1, r2)
+        stack = ResourceCollection(r1, r2)
         self.assert_json(stack,
                 {'Resources': {
                     'ResourceWithProperties1':{
@@ -85,7 +92,7 @@ class TestCFN(unittest2.TestCase):
         r1 = ResourceWithAttributes('r1')
         r2 = ResourceWithProperties('r2')
         r2.prop1 = r1.attr1
-        stack = Stack(r1, r2)
+        stack = ResourceCollection(r1, r2)
         self.assert_json(stack,
             {'Resources': {
                 'r1':{
@@ -108,7 +115,7 @@ class TestCFN(unittest2.TestCase):
         r1 = Resource1('r1')
         r2 = ResourceWithProperties('r2')
         r2.prop1 = 'prefix{0}'.format(r1)
-        stack = Stack(r1, r2)
+        stack = ResourceCollection(r1, r2)
         self.assert_json(stack,
             {'Resources': {
                 'r1':{
@@ -122,3 +129,25 @@ class TestCFN(unittest2.TestCase):
                     },
                 }
                 })
+    def test_stack_from_locals(self):
+        r1 = Resource1('r1')
+        stack = ResourceCollection(locals())
+        self.assert_json(stack, {'Resources': {
+            'r1':{ 'Type': 'Resource1'},
+            }})
+
+    def test_stack_from_locals_with_unnamed_resources(self):
+        r1 = Resource1()
+        stack = ResourceCollection(locals())
+        self.assert_json(stack, {'Resources': {
+            'r1':{ 'Type': 'Resource1'},
+            }})
+
+    def test_stack_from_mixed(self):
+        r1 = Resource1()
+        r2 = Resource1('RES2')
+        stack = ResourceCollection({'RES1':r1},r2)
+        self.assert_json(stack, {'Resources': {
+            'RES1':{ 'Type': 'Resource1'},
+            'RES2':{ 'Type': 'Resource1'},
+            }})
