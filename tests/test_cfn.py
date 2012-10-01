@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 from cfn import *
 import json
 #from nose.tools import *
@@ -28,6 +29,11 @@ class TestCFN(unittest2.TestCase):
 
     def test_resource_creation(self):
         r = Resource1()
+
+    def test_resources_attribute_of_stack(self):
+        r1 = Resource1()
+        stack = ResourceCollection(r1)
+        self.assertEquals({'Resource11': r1}, stack.resources)
 
     def test_resource_creation_with_attributes(self):
         r1 = ResourceWithAttributes(attr1='value')
