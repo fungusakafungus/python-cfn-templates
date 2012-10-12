@@ -1,6 +1,9 @@
 # -*- encoding: utf-8 -*-
-from json import JSONEncoder
+import json
 import re
+
+def to_json(o):
+    return json.dumps(o, cls=ResourceEncoder, indent=2)
 
 def resolve_references(o):
     if isinstance(o, (list, tuple)):
@@ -45,9 +48,9 @@ def _resolve_references_in_string(a_string):
         return cfn_join(result)
     return a_string
 
-class ResourceEncoder(JSONEncoder):
+class ResourceEncoder(json.JSONEncoder):
     def encode(self, o):
-        return JSONEncoder.encode(self, resolve_references(o))
+        return json.JSONEncoder.encode(self, resolve_references(o))
     def default(self, o):
         if isinstance(o, (Resource, Property, ResourceCollection, Attribute)):
             return resolve_references(o.to_json())
