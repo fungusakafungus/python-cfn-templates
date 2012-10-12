@@ -1,46 +1,56 @@
 # -*- encoding: utf-8 -*-
-from itertools import repeat
 from json import JSONEncoder
-import string
 import re
 
-def resolve_references_recursive(o):
+def resolve_references(o):
     if isinstance(o, (list, tuple)):
-        return [resolve_references_recursive(i) for i in o]
+        return [resolve_references(i) for i in o]
     if isinstance(o, dict):
-        return dict((k,resolve_references_recursive(v)) for k,v in o.items())
+        return dict((k,resolve_references(v)) for k,v in o.items())
     if isinstance(o, basestring):
-        return resolve_references_in_string(o)
+        return _resolve_references_in_string(o)
     return o
 
-def resolve_references_in_string(a_string):
-    attrRegex = re.compile('{(Attribute\|[^|]+\|[^|]+)|(Resource\|[^|]+)}')
-    formatter = string.Formatter()
-    if attrRegex.search(a_string):
-        result = []
-        for (literal_text, field_name, format_spec, conversion) in formatter.parse(a_string):
-            if literal_text:
-                result.append(literal_text)
-            if field_name:
-                parts = field_name.split('|')
-                if parts[0] == 'Resource':
-                    result.append({'Ref':parts[1]})
-                else:
-                    result.append({"Fn::GetAtt": [parts[1], parts[2]]})
-        assert len(result) != 0
-        if len(result) == 1:
-            return result[0]
-        else:
-            return cfn_join(result)
+_reference_regex = re.compile(r'''
+        { # Reference to a Resource or Attribute
+            (
+                (?:
+                    Attribute \| [^|]+ \| [^|]+     # ex.: {Attribute|ResourceName|AttrName}
+                )
+                |
+                (?:
+                    Resource \| [^|]+               # ex.: {Resource|ResourceName}}
+                )
+            )
+        }
+        |
+        ( [^{]+ )
+    ''', re.VERBOSE)
+
+def _resolve_references_in_string(a_string):
+    matches = _reference_regex.findall(a_string)
+    result = []
+    for reference, literal in matches:
+        if literal:
+            result.append(literal)
+        if reference:
+            parts = reference.split('|')
+            if parts[0] == 'Resource':
+                result.append({'Ref':parts[1]})
+            else:
+                result.append({"Fn::GetAtt": [parts[1], parts[2]]})
+    if len(result) == 1:
+        return result[0]
     else:
-        return a_string
+        return cfn_join(result)
+    return a_string
 
 class ResourceEncoder(JSONEncoder):
     def encode(self, o):
-        return JSONEncoder.encode(self, resolve_references_recursive(o))
+        return JSONEncoder.encode(self, resolve_references(o))
     def default(self, o):
         if isinstance(o, (Resource, Property, ResourceCollection, Attribute)):
-            return resolve_references_recursive(o.to_json())
+            return resolve_references(o.to_json())
 
 class ResourceCollection(object):
     def __init__(self, *resources):

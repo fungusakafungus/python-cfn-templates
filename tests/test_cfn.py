@@ -32,9 +32,9 @@ class TestCFN(unittest2.TestCase):
         r = Resource1()
 
     def test_resources_attribute_of_stack(self):
-        r1 = Resource1()
+        r1 = Resource1('r1')
         stack = ResourceCollection(r1)
-        self.assertEquals({'Resource11': r1}, stack.resources)
+        self.assertEquals({'r1': r1}, stack.resources)
 
     def test_resource_creation_with_attributes(self):
         r1 = ResourceWithAttributes(attr1='value')
@@ -222,3 +222,17 @@ class TestCFN(unittest2.TestCase):
                     ]
                 },
             }}})
+
+    def test_format_with_colons_in_resource_names(self):
+        r1 = Resource1('Namespace::Name')
+        r2 = ResourceWithProperties('r2')
+        r2.prop1 = '{0}'.format(r1)
+        stack = ResourceCollection(r1,r2)
+        self.assert_json(stack, {'Resources': {
+            'Namespace::Name':{'Type': 'Resource1'},
+            'r2': {
+                'Type': 'ResourceWithProperties',
+                'Properties': {
+                    'prop1':  {'Ref': 'Namespace::Name'}
+                }
+                }}})
