@@ -236,3 +236,39 @@ class TestCFN(unittest2.TestCase):
                     'prop1':  {'Ref': 'Namespace::Name'}
                 }
                 }}})
+
+
+    def test_custom_property(self):
+        class CustomProperty(Property):
+            def to_json(self):
+                return {'Custom': self.value}
+
+        class ResourceWithCustomProperty(Resource):
+            __module__ = ''
+            property = CustomProperty()
+
+        r = ResourceWithCustomProperty('r', property='value')
+        self.assert_json(r,
+                {
+                    'Type': 'ResourceWithCustomProperty',
+                    'Properties': {
+                        'property': {'Custom': 'value'}
+                        }
+                    }
+                )
+
+        stack = ResourceCollection(r)
+        self.assert_json(stack,
+                {
+                    'Resources':
+                    {
+                        'r':
+                        {
+                            'Type': 'ResourceWithCustomProperty',
+                            'Properties': {
+                                'property': {'Custom': 'value'}
+                                }
+                            }
+                        }
+                    }
+                )

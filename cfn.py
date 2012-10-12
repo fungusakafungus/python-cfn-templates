@@ -116,14 +116,16 @@ class Resource(object):
                 self._attribute_names.append(k)
                 setattr(self, k, Attribute(resource=self, name=k))
         for k,v in self.__class__.__dict__.items():
-            if isinstance(getattr(self, k, None), Property):
+            p = getattr(self, k, None)
+            if isinstance(p, Property):
                 self._property_names.append(k)
-                setattr(self, k, Property(resource=self))
+                setattr(self, k, p.__class__(resource=self))
         for k, v in properties_and_attributes.items():
             if k in self._attribute_names:
                 setattr(self, k, Attribute(resource=self, name=k, value=v))
             if k in self._property_names:
-                setattr(self, k, Property(resource=self, value=v))
+                p = getattr(self, k)
+                setattr(self, k, p.__class__(resource=self, value=v))
         self._initialized=True
 
     def type(self):
@@ -139,8 +141,10 @@ class Resource(object):
         for k,v in properties.items():
             if isinstance(v.value, Resource):
                 properties[k] = v.value.ref()
-            if isinstance(v.value, Attribute):
+            elif isinstance(v.value, Attribute):
                 properties[k] = v.value.ref()
+            else:
+                properties[k] = v.to_json()
 
         attributes=dict((k,getattr(self,k)) for k in self._attribute_names)
         attributes=dict((k,v) for (k,v) in attributes.items() if v.value)
