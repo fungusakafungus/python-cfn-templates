@@ -2,10 +2,45 @@
 from itertools import repeat
 from json import JSONEncoder
 import string
+import re
+
+def resolve_references_recursive(o):
+    if isinstance(o, (list, tuple)):
+        return [resolve_references_recursive(i) for i in o]
+    if isinstance(o, dict):
+        return dict((k,resolve_references_recursive(v)) for k,v in o.items())
+    if isinstance(o, basestring):
+        return resolve_references_in_string(o)
+    return o
+
+def resolve_references_in_string(a_string):
+    attrRegex = re.compile('{(Attribute\|[^|]+\|[^|]+)|(Resource\|[^|]+)}')
+    formatter = string.Formatter()
+    if attrRegex.search(a_string):
+        result = []
+        for (literal_text, field_name, format_spec, conversion) in formatter.parse(a_string):
+            if literal_text:
+                result.append(literal_text)
+            if field_name:
+                parts = field_name.split('|')
+                if parts[0] == 'Resource':
+                    result.append({'Ref':parts[1]})
+                else:
+                    result.append({"Fn::GetAtt": [parts[1], parts[2]]})
+        assert len(result) != 0
+        if len(result) == 1:
+            return result[0]
+        else:
+            return cfn_join(result)
+    else:
+        return a_string
 
 class ResourceEncoder(JSONEncoder):
+    def encode(self, o):
+        return JSONEncoder.encode(self, resolve_references_recursive(o))
     def default(self, o):
-        return  o.to_json() if getattr(o, 'to_json', None) else JSONEncoder.default(self, o)
+        if isinstance(o, (Resource, Property, ResourceCollection, Attribute)):
+            return resolve_references_recursive(o.to_json())
 
 class ResourceCollection(object):
     def __init__(self, *resources):
@@ -33,30 +68,16 @@ class ResourceCollection(object):
 def camel_case_to_pascal_case(a_case):
     return a_case[0].upper() + a_case[1:]
 
+def cfn_join(sequence, glue=''):
+    return {'Fn::Join': [glue, sequence]}
+
 class Property(object):
     def __init__(self, resource=None, value=None):
         self.resource=resource
         self.value=value
 
-    def _has_formatting(self, format_string):
-        formatter = string.Formatter()
-        field_names = [field_name for (literal_text, field_name, format_spec, conversion) in formatter.parse(format_string)]
-        return any(field_names)
-
-    def _format_string_chunks(self, format_string):
-        formatter = string.Formatter()
-        result = []
-        for (literal_text, field_name, format_spec, conversion) in formatter.parse(format_string):
-            if literal_text:
-                result.append(literal_text)
-            if field_name:
-                result.append({'Ref': field_name})
-        return result
-
 
     def to_json(self):
-        if isinstance(self.value, basestring) and self._has_formatting(self.value):
-                return {'Fn::Join': ['', self._format_string_chunks(self.value)]}
         return self.value
 
 class Attribute(object):
@@ -65,11 +86,14 @@ class Attribute(object):
         self.name=name
         self.value=value
 
-    def to_json(self):
-        return self.value
+    def ref(self):
+        return {'Fn::GetAtt': [self.resource.name, self.name]}
 
-    def ref(self, name):
-        return {'Fn::GetAttr': [self.resource.name, self.name]}
+    def to_json(self):
+        return self.ref()
+
+    def __format__(self, format_string):
+        return '{{Attribute|{resource}|{attribute}}}'.format(resource=self.resource.name, attribute=self.name)
 
 class Resource(object):
     _initialized = False
@@ -87,7 +111,7 @@ class Resource(object):
                 setattr(self, k, Property(resource=self))
         for k, v in properties_and_attributes.items():
             if k in self._attribute_names:
-                setattr(self, k, Attribute(resource=self, value=v))
+                setattr(self, k, Attribute(resource=self, name=k, value=v))
             if k in self._property_names:
                 setattr(self, k, Property(resource=self, value=v))
         self._initialized=True
@@ -106,10 +130,12 @@ class Resource(object):
             if isinstance(v.value, Resource):
                 properties[k] = v.value.ref()
             if isinstance(v.value, Attribute):
-                properties[k] = v.value.ref(k)
+                properties[k] = v.value.ref()
 
         attributes=dict((k,getattr(self,k)) for k in self._attribute_names)
         attributes=dict((k,v) for (k,v) in attributes.items() if v.value)
+        for k,v in attributes.items():
+            attributes[k]=v.value
 
         result = dict(Type=self.type(), **attributes)
         if properties:
@@ -120,14 +146,11 @@ class Resource(object):
         if not self._initialized or name == 'name':
             return object.__setattr__(self, name, value)
         else:
-            if isinstance(getattr(self,name), (Attribute, Property)):
-                getattr(self,name).value = value
-            else:
-                return object.__setattr__(self, name, value)
+            getattr(self,name).value = value
 
     # hackish, very hackish
     def __format__(self, format_string):
-        return '{{{0}}}'.format(self.name)
+        return '{{Resource|{0}}}'.format(self.name)
 
     def ref(self):
         return {'Ref':self.name}

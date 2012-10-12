@@ -1,8 +1,9 @@
 # -*- encoding: utf-8 -*-
-from cfn import *
 import json
-#from nose.tools import *
 import unittest2
+
+from cfn import *
+
 class Resource1(Resource):
     __module__=''
 
@@ -107,7 +108,7 @@ class TestCFN(unittest2.TestCase):
                 'r2':{
                     'Type': 'ResourceWithProperties',
                     'Properties': {
-                        'prop1': {'Fn::GetAttr': ['r1', 'attr1']}
+                        'prop1': {'Fn::GetAtt': ['r1', 'attr1']}
                         }
                     },
                 }
@@ -115,7 +116,7 @@ class TestCFN(unittest2.TestCase):
 
     def test_resource_format(self):
         r1 = Resource1('r1')
-        self.assertEquals('{r1}','{0}'.format(r1))
+        self.assertEquals('{Resource|r1}','{0}'.format(r1))
 
     def test_join_in_property(self):
         r1 = Resource1('r1')
@@ -157,3 +158,67 @@ class TestCFN(unittest2.TestCase):
             'RES1':{ 'Type': 'Resource1'},
             'RES2':{ 'Type': 'Resource1'},
             }})
+
+    def test_attribute_format(self):
+        r1 = ResourceWithAttributes('RES1', attr1='value')
+        actual = 'prefix{attribute}suffix'.format(attribute=r1.attr1)
+        self.assertEqual('prefix{Attribute|RES1|attr1}suffix', actual)
+
+    def test_attribute_in_string_to_json1(self):
+        r1 = ResourceWithAttributes('r1', attr1='value')
+        a1 = r1.attr1
+        str_with_attr = "{0}".format(a1)
+        self.assert_json(str_with_attr, { 'Fn::GetAtt': ['r1', 'attr1']})
+
+    def test_attribute_in_string_to_json2(self):
+        r1 = ResourceWithAttributes('r1', attr1='value')
+        a1 = r1.attr1
+        str_with_attr = "text{0}text".format(a1)
+        self.assert_json(str_with_attr, {
+                        'Fn::Join': ['', [
+                            'text', {
+                            'Fn::GetAtt': ['r1', 'attr1']},
+                            'text']]})
+
+    def test_attributes_in_strings(self):
+        r1 = ResourceWithAttributes('r1', attr1='value')
+        r2 = ResourceWithProperties('r2')
+        r2.prop1 = 'test{0}'.format(r1.attr1)
+
+        stack = ResourceCollection(r1, r2)
+        self.assert_json(stack, {'Resources': {
+            'r1':{'Type': 'ResourceWithAttributes', 'attr1': 'value'},
+            'r2':{'Type': 'ResourceWithProperties',
+                'Properties': {
+                    'prop1': {
+                        'Fn::Join': ['', ['test', {
+                            'Fn::GetAtt': ['r1', 'attr1']}]]}
+                    }
+                },
+            }})
+
+
+    def test_attributes_in_metadata(self):
+        r1 = ResourceWithAttributes(attr1='value')
+        r2 = ResourceWithMetadata()
+        r2.Metadata = {'key':r1.attr1}
+        stack = ResourceCollection(locals())
+        self.assert_json(stack, {'Resources': {
+            'r1':{ 'Type': 'ResourceWithAttributes', 'attr1':'value'},
+            'r2':{ 'Type': 'ResourceWithMetadata', 'Metadata': {'key': {'Fn::GetAtt': ['r1', 'attr1']}}},
+            }})
+
+    def test_attribute_in_a_list(self):
+        r1 = ResourceWithAttributes('r1', attr1='value')
+        r2 = ResourceWithProperties('r2')
+        r2.prop1 = [r1.attr1]
+        stack = ResourceCollection(r1, r2)
+        self.assert_json(stack, {'Resources': {
+            'r1':{'Type': 'ResourceWithAttributes', 'attr1': 'value'},
+            'r2':{'Type': 'ResourceWithProperties',
+                'Properties': {
+                    'prop1': [
+                        {'Fn::GetAtt': ['r1', 'attr1']}
+                    ]
+                },
+            }}})
