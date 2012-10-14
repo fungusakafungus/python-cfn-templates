@@ -24,7 +24,7 @@ class TestCFN(unittest2.TestCase):
         self.maxDiff=None
 
     def assert_json(self, actual, expected):
-        actual = json.dumps(actual, cls=ResourceEncoder, indent=2)
+        actual = to_json(actual)
         expected = json.dumps(expected, indent=2)
         self.assertEqual(unicode(expected), unicode(actual))
 
@@ -237,7 +237,6 @@ class TestCFN(unittest2.TestCase):
                 }
                 }}})
 
-
     def test_custom_property(self):
         class CustomProperty(Property):
             def to_json(self):
@@ -272,3 +271,17 @@ class TestCFN(unittest2.TestCase):
                         }
                     }
                 )
+
+    def test_properties_and_resource_inheritance(self):
+        class Resource2(ResourceWithProperties):
+            prop2 = Property()
+            __module__ = ''
+
+        r = Resource2('r', prop1=1, prop2=2)
+        self.assert_json(r, {'Type':'Resource2', 'Properties':
+            {'prop1':1,'prop2':2}})
+
+    def test_completion(self):
+        r1 = ResourceWithProperties()
+        self.assertTrue('prop1' in dir(ResourceWithProperties))
+        self.assertTrue('prop1' in dir(r1))

@@ -1,6 +1,7 @@
 # -*- encoding: utf-8 -*-
 import json
 import re
+from inspect import getmembers
 
 def to_json(o):
     return json.dumps(o, cls=ResourceEncoder, indent=2)
@@ -108,27 +109,41 @@ class Attribute(object):
     def __format__(self, format_string):
         return '{{Attribute|{resource}|{attribute}}}'.format(resource=self.resource.name, attribute=self.name)
 
+def isproperty(o):
+    return isinstance(o, Property)
+
+def isattribute(o):
+    return isinstance(o, Attribute)
+
 class Resource(object):
     _initialized = False
     def __init__(self, name=None, **properties_and_attributes):
         self.name = name
         self._attribute_names = []
         self._property_names = []
-        for k,v in self.__class__.__dict__.items():
-            if isinstance(getattr(self, k, None), Attribute):
-                self._attribute_names.append(k)
-                setattr(self, k, Attribute(resource=self, name=k))
-        for k,v in self.__class__.__dict__.items():
-            p = getattr(self, k, None)
-            if isinstance(p, Property):
-                self._property_names.append(k)
-                setattr(self, k, p.__class__(resource=self))
+
+        # walk through our class' attributes
+        for name, value in getmembers(self, isattribute):
+            # add the attribute name to the list
+            self._attribute_names.append(name)
+            # copy the attribute from class to instance, setting the resource
+            # to self. Copy is done by instantiating the attributes __class__
+            setattr(self, name, value.__class__(resource=self, name=name))
+
+        # walk through our class' properties
+        for name, value in getmembers(self, isproperty):
+            # add the attribute name to the list
+            self._property_names.append(name)
+            # copy the property from class to instance, setting the resource
+            # to self. Copy is done by instantiating the propertys __class__
+            setattr(self, name, value.__class__(resource=self))
+
+        # put values from arguments into properties and attributes
         for k, v in properties_and_attributes.items():
-            if k in self._attribute_names:
-                setattr(self, k, Attribute(resource=self, name=k, value=v))
-            if k in self._property_names:
-                p = getattr(self, k)
-                setattr(self, k, p.__class__(resource=self, value=v))
+            if k in self._attribute_names or k in self._property_names:
+                getattr(self, k).value = v
+            else:
+                raise AttributeError(k)
         self._initialized=True
 
     def type(self):
