@@ -95,6 +95,26 @@ class TestCFN(unittest2.TestCase):
                     }
                     })
 
+    def test_resources_deep_in_properties(self):
+        r1 = ResourceWithProperties()
+        r2 = ResourceWithProperties()
+        r1.prop1=[r2]
+        stack = ResourceCollection(r1, r2)
+        self.assert_json(stack,
+                {'Resources': {
+                    'ResourceWithProperties1':{
+                        'Type': 'ResourceWithProperties',
+                        'Properties': {
+                            'prop1': [{'Ref': 'ResourceWithProperties2'}]
+                            }
+                        },
+                    'ResourceWithProperties2':{
+                        'Type': 'ResourceWithProperties',
+                        }
+                    }
+                    })
+
+
     def test_stack_with_dependencies_in_attributes(self):
         r1 = ResourceWithAttributes('r1')
         r2 = ResourceWithProperties('r2')
@@ -299,3 +319,9 @@ class TestCFN(unittest2.TestCase):
 
         s = Stack2()
         self.assert_json(s, {'Resources': {'r1': {'Type': 'Resource1'}, 'r2': {'Type': 'Resource1'}}})
+
+    def test_property_assignment(self):
+
+        r = ResourceWithProperties(prop1='old value')
+        r.prop1 = 'new value'
+        self.assert_json(r, {'Type':'ResourceWithProperties', 'Properties':{'prop1': 'new value'}})
