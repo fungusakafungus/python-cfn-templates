@@ -18,3 +18,16 @@ class Instance(Resource):
     SecurityGroupIds = Property()
     IamInstanceProfile = Property()
     UserData = UserData()
+
+class Volume(Resource):
+    AvailabilityZone = Property()
+    Iops = Property()
+    Size = Property()
+    SnapshotId = Property()
+    Tags = Property()
+    VolumeType = Property()
+
+class VolumeAttachment(Resource):
+    Device = Property()
+    InstanceId = Property()
+    VolumeId = Property()
