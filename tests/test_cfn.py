@@ -285,3 +285,17 @@ class TestCFN(unittest2.TestCase):
         r1 = ResourceWithProperties()
         self.assertTrue('prop1' in dir(ResourceWithProperties))
         self.assertTrue('prop1' in dir(r1))
+
+    def test_stack_inheritance(self):
+        class Stack1(ResourceCollection):
+            def __init__(self, *args, **kwargs):
+                r1 = Resource1('r1')
+                super(Stack1, self).__init__(r1, *args, **kwargs)
+
+        class Stack2(Stack1):
+            def __init__(self, *args, **kwargs):
+                r2 = Resource1('r2')
+                super(Stack2, self).__init__(r2, *args, **kwargs)
+
+        s = Stack2()
+        self.assert_json(s, {'Resources': {'r1': {'Type': 'Resource1'}, 'r2': {'Type': 'Resource1'}}})
