@@ -1,4 +1,4 @@
-from cfn import ResourceCollection, to_json
+from cfn.core import ResourceCollection, to_json
 import AWS
 import AWS.IAM
 import AWS.EC2

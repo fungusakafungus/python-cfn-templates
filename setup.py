@@ -5,7 +5,6 @@ setup(name='python-cfn-templates',
       url='https://github.com/fungusakafungus/python-cfn-templates',
       author='Ilya Margolin',
       author_email='ilya@jimdo.com',
-      py_modules=['cfn'],
-      packages=['AWS'],
+      packages=['AWS','cfn'],
       )
 

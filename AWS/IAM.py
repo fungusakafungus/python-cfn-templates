@@ -1,4 +1,4 @@
-from cfn import Resource, Property, Attribute
+from cfn.core import Resource, Property, Attribute
 
 class User(Resource):
     policies = Property()

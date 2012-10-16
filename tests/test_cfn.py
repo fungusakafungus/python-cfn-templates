@@ -2,7 +2,7 @@
 import json
 import unittest2
 
-from cfn import *
+from cfn.core import *
 
 class Resource1(Resource):
     __module__=''

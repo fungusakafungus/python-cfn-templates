@@ -1,4 +1,4 @@
-from cfn import Resource, Attribute, Property
+from cfn.core import Resource, Attribute, Property
 
 class RecordSet(Resource):
     HostedZoneName = Property()
