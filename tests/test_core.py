@@ -100,28 +100,27 @@ class TestCFN(unittest2.TestCase):
         r2 = ResourceWithProperties()
         r1.prop1=[r2]
         stack = ResourceCollection(r1, r2)
-        self.assert_json(stack,
-                {'Resources': {
-                    'ResourceWithProperties1':{
-                        'Type': 'ResourceWithProperties',
-                        'Properties': {
-                            'prop1': [{'Ref': 'ResourceWithProperties2'}]
-                            }
-                        },
-                    'ResourceWithProperties2':{
-                        'Type': 'ResourceWithProperties',
+        self.assert_json(stack, {
+            'Resources': {
+                'ResourceWithProperties1': {
+                    'Type': 'ResourceWithProperties',
+                    'Properties': {
+                        'prop1': [{'Ref': 'ResourceWithProperties2'}]
                         }
+                    },
+                'ResourceWithProperties2': {
+                    'Type': 'ResourceWithProperties',
                     }
-                    })
-
+                }
+            })
 
     def test_stack_with_dependencies_in_attributes(self):
         r1 = ResourceWithAttributes('r1')
         r2 = ResourceWithProperties('r2')
         r2.prop1 = r1.attr1
         stack = ResourceCollection(r1, r2)
-        self.assert_json(stack,
-            {'Resources': {
+        self.assert_json(stack, {
+            'Resources': {
                 'r1':{
                     'Type': 'ResourceWithAttributes'
                     },
@@ -132,7 +131,7 @@ class TestCFN(unittest2.TestCase):
                         }
                     },
                 }
-                })
+            })
 
     def test_resource_format(self):
         r1 = Resource1('r1')
@@ -143,8 +142,8 @@ class TestCFN(unittest2.TestCase):
         r2 = ResourceWithProperties('r2')
         r2.prop1 = 'prefix{0}'.format(r1)
         stack = ResourceCollection(r1, r2)
-        self.assert_json(stack,
-            {'Resources': {
+        self.assert_json(stack, {
+            'Resources': {
                 'r1':{
                     'Type': 'Resource1'
                     },
@@ -155,29 +154,35 @@ class TestCFN(unittest2.TestCase):
                         }
                     },
                 }
-                })
+            })
     def test_stack_from_locals(self):
         r1 = Resource1('r1')
         stack = ResourceCollection(locals())
-        self.assert_json(stack, {'Resources': {
-            'r1':{ 'Type': 'Resource1'},
-            }})
+        self.assert_json(stack, {
+            'Resources': {
+                'r1':{ 'Type': 'Resource1'},
+                }
+            })
 
     def test_stack_from_locals_with_unnamed_resources(self):
         r1 = Resource1()
         stack = ResourceCollection(locals())
-        self.assert_json(stack, {'Resources': {
-            'r1':{ 'Type': 'Resource1'},
-            }})
+        self.assert_json(stack, {
+            'Resources': {
+                'r1':{ 'Type': 'Resource1'},
+                }
+            })
 
     def test_stack_from_mixed(self):
         r1 = Resource1()
         r2 = Resource1('RES2')
         stack = ResourceCollection({'RES1':r1},r2)
-        self.assert_json(stack, {'Resources': {
-            'RES1':{ 'Type': 'Resource1'},
-            'RES2':{ 'Type': 'Resource1'},
-            }})
+        self.assert_json(stack, {
+            'Resources': {
+                'RES1':{ 'Type': 'Resource1'},
+                'RES2':{ 'Type': 'Resource1'},
+                }
+            })
 
     def test_attribute_format(self):
         r1 = ResourceWithAttributes('RES1', attr1='value')
@@ -195,10 +200,14 @@ class TestCFN(unittest2.TestCase):
         a1 = r1.attr1
         str_with_attr = "text{0}text".format(a1)
         self.assert_json(str_with_attr, {
-                        'Fn::Join': ['', [
-                            'text', {
-                            'Fn::GetAtt': ['r1', 'attr1']},
-                            'text']]})
+            'Fn::Join': [
+                '',
+                [
+                    'text',
+                    {'Fn::GetAtt': ['r1', 'attr1']},
+                    'text']
+                ]
+            })
 
     def test_attributes_in_strings(self):
         r1 = ResourceWithAttributes('r1', attr1='value')
@@ -206,16 +215,24 @@ class TestCFN(unittest2.TestCase):
         r2.prop1 = 'test{0}'.format(r1.attr1)
 
         stack = ResourceCollection(r1, r2)
-        self.assert_json(stack, {'Resources': {
-            'r1':{'Type': 'ResourceWithAttributes', 'attr1': 'value'},
-            'r2':{'Type': 'ResourceWithProperties',
-                'Properties': {
-                    'prop1': {
-                        'Fn::Join': ['', ['test', {
-                            'Fn::GetAtt': ['r1', 'attr1']}]]}
-                    }
-                },
-            }})
+        self.assert_json(stack, {
+            'Resources': {
+                'r1':{'Type': 'ResourceWithAttributes', 'attr1': 'value'},
+                'r2':{'Type': 'ResourceWithProperties',
+                    'Properties': {
+                        'prop1': {
+                            'Fn::Join': [
+                                '',
+                                [
+                                    'test',
+                                    { 'Fn::GetAtt': ['r1', 'attr1']}
+                                    ]
+                                ]
+                            }
+                        }
+                    },
+                }
+            })
 
 
     def test_attributes_in_metadata(self):
@@ -223,39 +240,47 @@ class TestCFN(unittest2.TestCase):
         r2 = ResourceWithMetadata()
         r2.Metadata = {'key':r1.attr1}
         stack = ResourceCollection(locals())
-        self.assert_json(stack, {'Resources': {
-            'r1':{ 'Type': 'ResourceWithAttributes', 'attr1':'value'},
-            'r2':{ 'Type': 'ResourceWithMetadata', 'Metadata': {'key': {'Fn::GetAtt': ['r1', 'attr1']}}},
-            }})
+        self.assert_json(stack, {
+            'Resources': {
+                'r1':{ 'Type': 'ResourceWithAttributes', 'attr1':'value'},
+                'r2':{ 'Type': 'ResourceWithMetadata', 'Metadata': {'key': {'Fn::GetAtt': ['r1', 'attr1']}}},
+                }
+            })
 
     def test_attribute_in_a_list(self):
         r1 = ResourceWithAttributes('r1', attr1='value')
         r2 = ResourceWithProperties('r2')
         r2.prop1 = [r1.attr1]
         stack = ResourceCollection(r1, r2)
-        self.assert_json(stack, {'Resources': {
-            'r1':{'Type': 'ResourceWithAttributes', 'attr1': 'value'},
-            'r2':{'Type': 'ResourceWithProperties',
-                'Properties': {
-                    'prop1': [
-                        {'Fn::GetAtt': ['r1', 'attr1']}
-                    ]
-                },
-            }}})
+        self.assert_json(stack, {
+            'Resources': {
+                'r1':{'Type': 'ResourceWithAttributes', 'attr1': 'value'},
+                'r2':{'Type': 'ResourceWithProperties',
+                    'Properties': {
+                        'prop1': [
+                            {'Fn::GetAtt': ['r1', 'attr1']}
+                            ]
+                        },
+                    }
+                }
+            })
 
     def test_format_with_colons_in_resource_names(self):
         r1 = Resource1('Namespace::Name')
         r2 = ResourceWithProperties('r2')
         r2.prop1 = '{0}'.format(r1)
         stack = ResourceCollection(r1,r2)
-        self.assert_json(stack, {'Resources': {
-            'Namespace::Name':{'Type': 'Resource1'},
-            'r2': {
-                'Type': 'ResourceWithProperties',
-                'Properties': {
-                    'prop1':  {'Ref': 'Namespace::Name'}
+        self.assert_json(stack, {
+            'Resources': {
+                'Namespace::Name':{'Type': 'Resource1'},
+                'r2': {
+                    'Type': 'ResourceWithProperties',
+                    'Properties': {
+                        'prop1':  {'Ref': 'Namespace::Name'}
+                        }
+                    }
                 }
-                }}})
+            })
 
     def test_custom_property(self):
         class CustomProperty(Property):
@@ -267,30 +292,24 @@ class TestCFN(unittest2.TestCase):
             property = CustomProperty()
 
         r = ResourceWithCustomProperty('r', property='value')
-        self.assert_json(r,
-                {
+        self.assert_json(r, {
+            'Type': 'ResourceWithCustomProperty',
+            'Properties': {
+                'property': {'Custom': 'value'}
+                }
+            })
+
+        stack = ResourceCollection(r)
+        self.assert_json(stack, {
+            'Resources': {
+                'r': {
                     'Type': 'ResourceWithCustomProperty',
                     'Properties': {
                         'property': {'Custom': 'value'}
                         }
                     }
-                )
-
-        stack = ResourceCollection(r)
-        self.assert_json(stack,
-                {
-                    'Resources':
-                    {
-                        'r':
-                        {
-                            'Type': 'ResourceWithCustomProperty',
-                            'Properties': {
-                                'property': {'Custom': 'value'}
-                                }
-                            }
-                        }
-                    }
-                )
+                }
+            })
 
     def test_properties_and_resource_inheritance(self):
         class Resource2(ResourceWithProperties):
@@ -298,8 +317,10 @@ class TestCFN(unittest2.TestCase):
             __module__ = ''
 
         r = Resource2('r', prop1=1, prop2=2)
-        self.assert_json(r, {'Type':'Resource2', 'Properties':
-            {'prop1':1,'prop2':2}})
+        self.assert_json(r, {
+            'Type':'Resource2',
+            'Properties': {'prop1':1,'prop2':2}
+            })
 
     def test_completion(self):
         r1 = ResourceWithProperties()
