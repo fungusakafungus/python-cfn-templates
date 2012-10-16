@@ -1,7 +1,7 @@
 from cfn.core import Resource, Property, Attribute
 
 class User(Resource):
-    policies = Property()
+    Policies = Property()
 
 class Policy(Resource):
     PolicyName = Property()
