@@ -3,33 +3,39 @@ import json
 import re
 from inspect import getmembers
 
+
 def to_json(o):
     return json.dumps(o, cls=ResourceEncoder, indent=2)
+
 
 def resolve_references(o):
     if isinstance(o, (list, tuple)):
         return [resolve_references(i) for i in o]
     if isinstance(o, dict):
-        return dict((k,resolve_references(v)) for k,v in o.items())
+        return dict((k, resolve_references(v)) for k, v in o.items())
     if isinstance(o, basestring):
         return _resolve_references_in_string(o)
     return o
 
+
 _reference_regex = re.compile(r'''
-        { # Reference to a Resource or Attribute
-            (
-                (?:
-                    Attribute \| [^|]+ \| [^|]+     # ex.: {Attribute|ResourceName|AttrName}
-                )
-                |
-                (?:
-                    Resource \| [^|]+               # ex.: {Resource|ResourceName}}
-                )
+    { # Reference to a Resource or Attribute
+        (
+            (?:
+                # ex.: {Attribute|ResourceName|AttrName}
+                Attribute \| [^|]+ \| [^|]+
             )
-        }
-        |
-        ( [^{]+ )
+            |
+            (?:
+                # ex.: {Resource|ResourceName}}
+                Resource \| [^|]+
+            )
+        )
+    }
+    |
+    ( [^{]+ )
     ''', re.VERBOSE)
+
 
 def _resolve_references_in_string(a_string):
     matches = _reference_regex.findall(a_string)
@@ -40,7 +46,7 @@ def _resolve_references_in_string(a_string):
         if reference:
             parts = reference.split('|')
             if parts[0] == 'Resource':
-                result.append({'Ref':parts[1]})
+                result.append({'Ref': parts[1]})
             else:
                 result.append({"Fn::GetAtt": [parts[1], parts[2]]})
     if len(result) == 1:
@@ -49,20 +55,23 @@ def _resolve_references_in_string(a_string):
         return cfn_join(result)
     return a_string
 
+
 class ResourceEncoder(json.JSONEncoder):
     def encode(self, o):
         return json.JSONEncoder.encode(self, resolve_references(o))
+
     def default(self, o):
         if isinstance(o, (Resource, Property, ResourceCollection, Attribute)):
             return resolve_references(o.to_json())
 
+
 class ResourceCollection(object):
     def __init__(self, *resources):
         self.resources = {}
-        dicts = [d for d in resources if isinstance(d,dict)]
-        resources = [r for r in resources if isinstance(r,Resource)]
+        dicts = [d for d in resources if isinstance(d, dict)]
+        resources = [r for r in resources if isinstance(r, Resource)]
         for arg in dicts:
-            for name,resource in arg.items():
+            for name, resource in arg.items():
                 if not isinstance(resource, Resource):
                     continue
                 if not resource.name:
@@ -77,28 +86,31 @@ class ResourceCollection(object):
             self.resources[r.name] = r
 
     def to_json(self):
-        return {'Resources':self.resources}
+        return {'Resources': self.resources}
+
 
 def camel_case_to_pascal_case(a_case):
     return a_case[0].upper() + a_case[1:]
 
+
 def cfn_join(sequence, glue=''):
     return {'Fn::Join': [glue, sequence]}
 
+
 class Property(object):
     def __init__(self, resource=None, value=None):
-        self.resource=resource
-        self.value=value
-
+        self.resource = resource
+        self.value = value
 
     def to_json(self):
         return self.value
 
+
 class Attribute(object):
     def __init__(self, resource=None, name=None, value=None):
-        self.resource=resource
-        self.name=name
-        self.value=value
+        self.resource = resource
+        self.name = name
+        self.value = value
 
     def ref(self):
         return {'Fn::GetAtt': [self.resource.name, self.name]}
@@ -107,16 +119,22 @@ class Attribute(object):
         return self.ref()
 
     def __format__(self, format_string):
-        return '{{Attribute|{resource}|{attribute}}}'.format(resource=self.resource.name, attribute=self.name)
+        return '{{Attribute|{resource}|{attribute}}}'.format(
+                resource=self.resource.name,
+                attribute=self.name)
+
 
 def isproperty(o):
     return isinstance(o, Property)
 
+
 def isattribute(o):
     return isinstance(o, Attribute)
 
+
 class Resource(object):
     _initialized = False
+
     def __init__(self, name=None, **properties_and_attributes):
         self.name = name
         self._attribute_names = []
@@ -144,7 +162,7 @@ class Resource(object):
                 getattr(self, k).value = v
             else:
                 raise AttributeError(k)
-        self._initialized=True
+        self._initialized = True
 
     def type(self):
         parts = []
@@ -154,9 +172,9 @@ class Resource(object):
         return '::'.join(parts)
 
     def to_json(self):
-        properties=dict((k,getattr(self,k)) for k in self._property_names)
-        properties=dict((k,v) for (k,v) in properties.items() if v.value)
-        for k,v in properties.items():
+        properties = dict((k, getattr(self, k)) for k in self._property_names)
+        properties = dict((k, v) for (k, v) in properties.items() if v.value)
+        for k, v in properties.items():
             if isinstance(v.value, Resource):
                 properties[k] = v.value.ref()
             elif isinstance(v.value, Attribute):
@@ -164,10 +182,10 @@ class Resource(object):
             else:
                 properties[k] = v.to_json()
 
-        attributes=dict((k,getattr(self,k)) for k in self._attribute_names)
-        attributes=dict((k,v) for (k,v) in attributes.items() if v.value)
-        for k,v in attributes.items():
-            attributes[k]=v.value
+        attributes = dict((k, getattr(self, k)) for k in self._attribute_names)
+        attributes = dict((k, v) for (k, v) in attributes.items() if v.value)
+        for k, v in attributes.items():
+            attributes[k] = v.value
 
         result = dict(Type=self.type(), **attributes)
         if properties:
@@ -178,11 +196,11 @@ class Resource(object):
         if not self._initialized or name == 'name':
             return object.__setattr__(self, name, value)
         else:
-            getattr(self,name).value = value
+            getattr(self, name).value = value
 
     # hackish, very hackish
     def __format__(self, format_string):
         return '{{Resource|{0}}}'.format(self.name)
 
     def ref(self):
-        return {'Ref':self.name}
+        return {'Ref': self.name}
