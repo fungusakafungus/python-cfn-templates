@@ -5,7 +5,8 @@ from inspect import getmembers
 
 
 def to_json(o):
-    return json.dumps(o, cls=ResourceEncoder, indent=2)
+    resolved = resolve_references(o)
+    return json.dumps(resolved, cls=ResourceEncoder, indent=2)
 
 
 def resolve_references(o):
@@ -15,6 +16,8 @@ def resolve_references(o):
         return dict((k, resolve_references(v)) for k, v in o.items())
     if isinstance(o, basestring):
         return _resolve_references_in_string(o)
+    if hasattr(o, '_resolve_references'):
+        return o._resolve_references()
     return o
 
 
@@ -51,6 +54,8 @@ def _resolve_references_in_string(a_string):
                 result.append({"Fn::GetAtt": [parts[1], parts[2]]})
     if len(result) == 1:
         return result[0]
+    elif len(result) == 0:
+        return a_string
     else:
         return cfn_join(result)
     return a_string
@@ -105,6 +110,12 @@ class Property(object):
     def to_json(self):
         return self.value
 
+    def _resolve_references(self):
+        if isresource(self.value):
+            return self.value.ref()
+        else:
+            return self
+
 
 class Attribute(object):
     def __init__(self, resource=None, name=None, value=None):
@@ -122,6 +133,10 @@ class Attribute(object):
         return '{{Attribute|{resource}|{attribute}}}'.format(
                 resource=self.resource.name,
                 attribute=self.name)
+
+
+def isresource(o):
+    return isinstance(o, Resource)
 
 
 def isproperty(o):
@@ -198,7 +213,6 @@ class Resource(object):
         else:
             getattr(self, name).value = value
 
-    # hackish, very hackish
     def __format__(self, format_string):
         return '{{Resource|{0}}}'.format(self.name)
 
