@@ -16,4 +16,4 @@ TODO
 Caveats
 -------
 
-It only contain a very small part of CloudFormation types
+It only contains a very small part of CloudFormation types
