@@ -1,8 +1,12 @@
 # -*- encoding: utf-8 -*-
 import json
 import unittest2
+import logging
 
 from cfn.core import *
+
+#logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 def assert_json(self, actual, expected):
     actual = to_json(actual)
@@ -294,8 +298,8 @@ class TestCore(unittest2.TestCase):
 
     def test_custom_property(self):
         class CustomProperty(Property):
-            def to_json(self):
-                return {'Custom': self.value}
+            def resolve_references(self, embed):
+                return {'Custom': resolve_references(self.value, False)}
 
         class ResourceWithCustomProperty(Resource):
             __module__ = ''
