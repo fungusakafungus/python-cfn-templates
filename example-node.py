@@ -32,7 +32,7 @@ policy.PolicyDocument = {
             }]
         }
 CFNInitUser = AWS.IAM.User('CFNInitUser')
-CFNInitUser.policies = [policy]
+CFNInitUser.Policies = [policy]
 CFNKeys = AWS.IAM.AccessKey('CFNKeys')
 CFNKeys.UserName = 'CFNInitUser'
 instance = AWS.EC2.Instance('EC2Instance')
