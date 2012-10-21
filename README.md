@@ -6,7 +6,7 @@ TODO
 ----
 
  * provide a way to set defaults for resources
- * provide an example of Stack inheritance
+ * provide an example of stack inheritance
  * use cfn-validate-template
  * parameters, mappings, outputs
   * or maybe use argparse in an example to cirumvent parameters
