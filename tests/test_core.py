@@ -4,29 +4,39 @@ import unittest2
 
 from cfn.core import *
 
+def assert_json(self, actual, expected):
+    actual = to_json(actual)
+    expected = json.dumps(expected, indent=2)
+
+    # unittest2 makes better diff for unicode
+    self.assertEqual(unicode(expected), unicode(actual))
+
+
+unittest2.TestCase.assert_json = assert_json
+
+
 class Resource1(Resource):
     __module__=''
+
 
 class ResourceWithProperties(Resource):
     prop1=Property()
     __module__=''
 
+
 class ResourceWithAttributes(Resource):
     attr1=Attribute()
     __module__=''
+
 
 class ResourceWithMetadata(Resource):
     Metadata=Attribute()
     __module__=''
 
-class TestCFN(unittest2.TestCase):
+
+class TestCore(unittest2.TestCase):
     def setUp(self):
         self.maxDiff=None
-
-    def assert_json(self, actual, expected):
-        actual = to_json(actual)
-        expected = json.dumps(expected, indent=2)
-        self.assertEqual(unicode(expected), unicode(actual))
 
     def test_resource_creation(self):
         r = Resource1()
