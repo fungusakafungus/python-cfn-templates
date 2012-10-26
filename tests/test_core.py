@@ -5,7 +5,6 @@ import logging
 
 from cfn.core import *
 
-#logging.basicConfig(level=logging.DEBUG)
 logging.basicConfig(level=logging.INFO)
 
 def assert_json(self, actual, expected):
@@ -88,6 +87,17 @@ class TestCore(unittest2.TestCase):
             'Resource1':{ 'Type': 'Resource1'},
             'Resource11':{ 'Type': 'Resource1'},
             'Resource12':{ 'Type': 'Resource1'},
+            }})
+
+    def test_autonaming_with_non_empty_module(self):
+        class TestResource(Resource): pass
+
+        r1 = TestResource()
+        r2 = TestResource()
+        stack = ResourceCollection(r1, r2)
+        self.assert_json(stack, {'Resources': {
+            'TestResource':{ 'Type': 'tests::test_core::TestResource'},
+            'TestResource1':{ 'Type': 'tests::test_core::TestResource'},
             }})
 
     def test_stack_with_dependencies_in_properties(self):

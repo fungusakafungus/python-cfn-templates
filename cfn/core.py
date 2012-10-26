@@ -88,7 +88,8 @@ class ResourceCollection(object):
         for r in resources:
             if not r.name:
                 for i in [''] + range(1,1000):
-                    r.name = r.type() + str(i)
+                    simple_type_name = re.split('::', r.type())[-1]
+                    r.name = simple_type_name + str(i)
                     if r.name not in self.resources:
                         break
             self.resources[r.name] = r
@@ -96,10 +97,6 @@ class ResourceCollection(object):
     @_log_call
     def resolve_references(self, embed):
         return {'Resources': resolve_references(self.resources, True)}
-
-
-def camel_case_to_pascal_case(a_case):
-    return a_case[0].upper() + a_case[1:]
 
 
 def cfn_join(sequence, glue=''):
