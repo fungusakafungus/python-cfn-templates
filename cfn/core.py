@@ -8,7 +8,7 @@ from inspect import getmembers
 
 def to_json(o):
     resolved = resolve_references(o, True)
-    return json.dumps(resolved, indent=2)
+    return json.dumps(resolved, indent=2, sort_keys=True)
 
 
 def _log_call(func):
@@ -87,8 +87,8 @@ class ResourceCollection(object):
                 resources.append(resource)
         for r in resources:
             if not r.name:
-                for i in xrange(1000):
-                    r.name = r.type() + str(i + 1)
+                for i in [''] + range(1,1000):
+                    r.name = r.type() + str(i)
                     if r.name not in self.resources:
                         break
             self.resources[r.name] = r
@@ -153,7 +153,6 @@ def isattribute(o):
 
 
 class _ResourceMetaClass(type):
-
     @_log_call
     def __setattr__(cls, name, value):
         if hasattr(cls, name) and isinstance(getattr(cls, name), Property):
@@ -165,7 +164,6 @@ class _ResourceMetaClass(type):
 
 
 class Resource(object):
-
     __metaclass__ = _ResourceMetaClass
     _initialized = False
 

@@ -10,7 +10,7 @@ logging.basicConfig(level=logging.INFO)
 
 def assert_json(self, actual, expected):
     actual = to_json(actual)
-    expected = json.dumps(expected, indent=2)
+    expected = json.dumps(expected, indent=2, sort_keys=True)
 
     # unittest2 makes better diff for unicode
     self.assertEqual(unicode(expected), unicode(actual))
@@ -76,7 +76,7 @@ class TestCore(unittest2.TestCase):
     def test_stack_creation(self):
         r1 = ResourceWithProperties(prop1=1)
         stack = ResourceCollection(r1)
-        self.assert_json(stack, {'Resources': { 'ResourceWithProperties1':{ 'Type':
+        self.assert_json(stack, {'Resources': { 'ResourceWithProperties':{ 'Type':
             'ResourceWithProperties', 'Properties': {'prop1': 1} } } })
 
     def test_autonaming(self):
@@ -85,9 +85,9 @@ class TestCore(unittest2.TestCase):
         r3 = Resource1()
         stack = ResourceCollection(r1, r2, r3)
         self.assert_json(stack, {'Resources': {
+            'Resource1':{ 'Type': 'Resource1'},
             'Resource11':{ 'Type': 'Resource1'},
             'Resource12':{ 'Type': 'Resource1'},
-            'Resource13':{ 'Type': 'Resource1'},
             }})
 
     def test_stack_with_dependencies_in_properties(self):
@@ -97,13 +97,13 @@ class TestCore(unittest2.TestCase):
         stack = ResourceCollection(r1, r2)
         self.assert_json(stack,
                 {'Resources': {
-                    'ResourceWithProperties1':{
+                    'ResourceWithProperties':{
                         'Type': 'ResourceWithProperties',
                         'Properties': {
-                            'prop1': {'Ref': 'ResourceWithProperties2'}
+                            'prop1': {'Ref': 'ResourceWithProperties1'}
                             }
                         },
-                    'ResourceWithProperties2':{
+                    'ResourceWithProperties1':{
                         'Type': 'ResourceWithProperties',
                         }
                     }
@@ -116,13 +116,13 @@ class TestCore(unittest2.TestCase):
         stack = ResourceCollection(r1, r2)
         self.assert_json(stack, {
             'Resources': {
-                'ResourceWithProperties1': {
+                'ResourceWithProperties': {
                     'Type': 'ResourceWithProperties',
                     'Properties': {
-                        'prop1': [{'Ref': 'ResourceWithProperties2'}]
+                        'prop1': [{'Ref': 'ResourceWithProperties1'}]
                         }
                     },
-                'ResourceWithProperties2': {
+                'ResourceWithProperties1': {
                     'Type': 'ResourceWithProperties',
                     }
                 }
