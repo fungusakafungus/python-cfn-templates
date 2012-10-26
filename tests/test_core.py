@@ -356,7 +356,16 @@ class TestCore(unittest2.TestCase):
         self.assert_json(s, {'Resources': {'r1': {'Type': 'Resource1'}, 'r2': {'Type': 'Resource1'}}})
 
     def test_property_assignment(self):
-
         r = ResourceWithProperties(prop1='old value')
         r.prop1 = 'new value'
         self.assert_json(r, {'Type':'ResourceWithProperties', 'Properties':{'prop1': 'new value'}})
+
+    def test_defaults_assigning(self):
+        class ResourceWithDefaults(Resource):
+            __module__ = ''
+            prop1 = Property()
+
+        ResourceWithDefaults.prop1 = 'default'
+        r = ResourceWithDefaults()
+        self.assert_json(r, {'Type':'ResourceWithDefaults',
+            'Properties':{'prop1': 'default'}})

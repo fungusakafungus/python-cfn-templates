@@ -152,7 +152,21 @@ def isattribute(o):
     return isinstance(o, Attribute)
 
 
+class _ResourceMetaClass(type):
+
+    @_log_call
+    def __setattr__(cls, name, value):
+        if hasattr(cls, name) and isinstance(getattr(cls, name), Property):
+            logging.debug('Setting default property {2} of class {0} to {1}', cls,
+                    name, value)
+            getattr(cls, name).value = value
+        else:
+            type.__setattr__(cls, name, value)
+
+
 class Resource(object):
+
+    __metaclass__ = _ResourceMetaClass
     _initialized = False
 
     def __init__(self, name=None, **properties_and_attributes):
@@ -174,7 +188,8 @@ class Resource(object):
             self._property_names.append(name)
             # copy the property from class to instance, setting the resource
             # to self. Copy is done by instantiating the propertys __class__
-            setattr(self, name, value.__class__(resource=self))
+            setattr(self, name, value.__class__(resource=self,
+                value=value.value))
 
         # put values from arguments into properties and attributes
         for k, v in properties_and_attributes.items():
@@ -208,6 +223,7 @@ class Resource(object):
             result.update(Properties=properties)
         return resolve_references(result, False)
 
+    @_log_call
     def __setattr__(self, name, value):
         if not self._initialized or name == 'name':
             return object.__setattr__(self, name, value)
