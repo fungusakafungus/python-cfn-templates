@@ -96,7 +96,26 @@ class ResourceCollection(object):
 
     @_log_call
     def resolve_references(self, embed):
-        return {'Resources': resolve_references(self.resources, True)}
+        result = {}
+        if self.resources:
+            result.update({'Resources': resolve_references(self.resources, True)})
+        return result
+
+class Stack(ResourceCollection):
+    AWSTemplateFormatVersion = '2010-09-09'
+    Description = ''
+
+    def __init__(self, *resources, **kwargs):
+        ResourceCollection.__init__(self, *resources)
+        if 'Description' in kwargs:
+            self.Description = kwargs['Description']
+
+    def resolve_references(self, embed):
+        rc = ResourceCollection.resolve_references(self, embed)
+        rc.update({'AWSTemplateFormatVersion': self.AWSTemplateFormatVersion})
+        if self.Description:
+            rc.update({'Description': self.Description})
+        return rc
 
 
 def cfn_join(sequence, glue=''):
