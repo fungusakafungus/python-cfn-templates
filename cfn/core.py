@@ -104,6 +104,7 @@ class ResourceCollection(object):
 class Stack(ResourceCollection):
     AWSTemplateFormatVersion = '2010-09-09'
     Description = ''
+    Outputs = {}
 
     def __init__(self, *resources, **kwargs):
         ResourceCollection.__init__(self, *resources)
@@ -115,6 +116,9 @@ class Stack(ResourceCollection):
         rc.update({'AWSTemplateFormatVersion': self.AWSTemplateFormatVersion})
         if self.Description:
             rc.update({'Description': self.Description})
+        if self.Outputs:
+            outputs = resolve_references(self.Outputs, False)
+            rc.update({'Outputs': outputs})
         return rc
 
 
@@ -151,6 +155,13 @@ class Attribute(object):
         return resolve_references(self.ref(), True)
 
     def __format__(self, format_string):
+        if not self.resource or not self.resource.name:
+            raise AttributeError( 'Referenced attribute '
+                    'does not belong to a resource with a name')
+        if not self.name:
+            raise AttributeError(
+                    'Referenced attribute of resource {0} does not have a '
+                    'name'.format(self.resource.name))
         return '{{Attribute|{resource}|{attribute}}}'.format(
                 resource=self.resource.name,
                 attribute=self.name)
@@ -245,7 +256,13 @@ class Resource(object):
             getattr(self, name).value = value
 
     def __format__(self, format_string):
+        if not self.name:
+            raise AttributeError(
+                    'Referenced resource of type {0} does not have a name'.format(self.type()))
         return '{{Resource|{0}}}'.format(self.name)
 
     def ref(self):
+        if not self.name:
+            raise AttributeError(
+                    'Referenced resource of type {0} does not have a name'.format(self.type()))
         return {'Ref': self.name}

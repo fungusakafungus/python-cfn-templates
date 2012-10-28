@@ -213,6 +213,11 @@ class TestCore(unittest2.TestCase):
         actual = 'prefix{attribute}suffix'.format(attribute=r1.attr1)
         self.assertEqual('prefix{Attribute|RES1|attr1}suffix', actual)
 
+    def test_attribute_format_unnamed_resource(self):
+        r1 = ResourceWithAttributes(attr1='value')
+        with self.assertRaises(AttributeError):
+            'prefix{attribute}suffix'.format(attribute=r1.attr1)
+
     def test_attribute_in_string_to_json1(self):
         r1 = ResourceWithAttributes('r1', attr1='value')
         a1 = r1.attr1
