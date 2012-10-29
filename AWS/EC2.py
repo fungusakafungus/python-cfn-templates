@@ -9,6 +9,7 @@ class Instance(Resource):
     Metadata = Attribute()
     PrivateDnsName = Attribute()
     PrivateIp = Attribute()
+    PublicIp = Attribute()
 
     AvailabilityZone = Property()
     ImageId = Property()
