@@ -2,6 +2,11 @@ This is a DSL for Amazon CloudFormation
 
 See tests and example-node.py for usage
 
+Requirements
+------------
+
+ * py.test
+
 TODO
 ----
 
