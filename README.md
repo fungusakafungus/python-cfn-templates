@@ -22,3 +22,9 @@ Caveats
 -------
 
 It only contains a very small part of CloudFormation types
+
+Changelog
+---------
+
+ - 0.3.0
+  * changed the way how to define custom properties, see `test_custom_property` in `tests/test_core.py`

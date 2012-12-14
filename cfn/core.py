@@ -22,14 +22,16 @@ def _log_call(func):
 
 @_log_call
 def resolve_references(o):
+    if hasattr(o, 'ref'):
+        return o.ref()
+    if hasattr(o, 'to_json'):
+        return resolve_references(o.to_json())
     if isinstance(o, (list, tuple)):
         return [resolve_references(i) for i in o]
     if isinstance(o, dict):
         return dict((k, resolve_references(v)) for k, v in o.items())
     if isinstance(o, basestring):
         return resolve_references_in_string(o)
-    if hasattr(o, 'resolve_references'):
-        return o.resolve_references()
     return o
 
 
@@ -93,7 +95,7 @@ class ResourceCollection(object):
             self.resources[r.name] = r
 
     @_log_call
-    def resolve_references(self):
+    def to_json(self):
         result = {}
         if self.resources:
             result.update({'Resources': dict((k, v.to_json()) for k, v in self.resources.items())})
@@ -110,8 +112,8 @@ class Stack(ResourceCollection):
         if 'Description' in kwargs:
             self.Description = kwargs['Description']
 
-    def resolve_references(self):
-        rc = ResourceCollection.resolve_references(self)
+    def to_json(self):
+        rc = ResourceCollection.to_json(self)
         rc.update({'AWSTemplateFormatVersion': self.AWSTemplateFormatVersion})
         if self.Description:
             rc.update({'Description': self.Description})
@@ -131,7 +133,7 @@ class Property(object):
         self.value = value
 
     @_log_call
-    def resolve_references(self):
+    def to_json(self):
         if isresource(self.value):
             result = self.value.ref()
         else:
@@ -149,9 +151,8 @@ class Attribute(object):
     def ref(self):
         return {'Fn::GetAtt': [self.resource.name, self.name]}
 
-    @_log_call
-    def resolve_references(self):
-        return resolve_references(self.ref())
+    def to_json(self):
+            return self.value
 
     def __format__(self, format_string):
         if not self.resource or not self.resource.name:
@@ -231,7 +232,7 @@ class Resource(object):
         return '::'.join(parts)
 
     @_log_call
-    def resolve_references(self):
+    def to_json(self):
         return self.ref()
 
     @_log_call
@@ -240,9 +241,9 @@ class Resource(object):
         properties = dict((k, v) for (k, v) in properties.items() if v.value)
 
         attributes = dict((k, getattr(self, k)) for k in self._attribute_names)
-        attributes = dict((k, v) for (k, v) in attributes.items() if v.value)
-        for k, v in attributes.items():
-            attributes[k] = v.value
+        attributes = dict((k, v.to_json()) for (k, v) in attributes.items())
+        # remove empty attributes
+        attributes = dict((k, v) for (k, v) in attributes.items() if v is not None)
 
         result = dict(Type=self.type(), **attributes)
         if properties:

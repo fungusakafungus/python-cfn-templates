@@ -306,8 +306,8 @@ def test_format_with_colons_in_resource_names():
 
 def test_custom_property():
     class CustomProperty(Property):
-        def resolve_references(self):
-            return {'Custom': resolve_references(self.value)}
+        def to_json(self):
+            return {'Custom': self.value}
 
     class ResourceWithCustomProperty(Resource):
         __module__ = ''
