@@ -7,7 +7,7 @@ from inspect import getmembers
 
 
 def to_json(o):
-    resolved = resolve_references(o, True)
+    resolved = resolve_references(o)
     return json.dumps(resolved, indent=2, sort_keys=True)
 
 
@@ -21,15 +21,15 @@ def _log_call(func):
 
 
 @_log_call
-def resolve_references(o, embed):
+def resolve_references(o):
     if isinstance(o, (list, tuple)):
-        return [resolve_references(i, embed) for i in o]
+        return [resolve_references(i) for i in o]
     if isinstance(o, dict):
-        return dict((k, resolve_references(v, embed)) for k, v in o.items())
+        return dict((k, resolve_references(v)) for k, v in o.items())
     if isinstance(o, basestring):
         return resolve_references_in_string(o)
     if hasattr(o, 'resolve_references'):
-        return o.resolve_references(embed)
+        return o.resolve_references()
     return o
 
 
@@ -95,10 +95,10 @@ class ResourceCollection(object):
             self.resources[r.name] = r
 
     @_log_call
-    def resolve_references(self, embed):
+    def resolve_references(self):
         result = {}
         if self.resources:
-            result.update({'Resources': resolve_references(self.resources, True)})
+            result.update({'Resources': dict((k, v.to_json()) for k, v in self.resources.items())})
         return result
 
 class Stack(ResourceCollection):
@@ -111,13 +111,13 @@ class Stack(ResourceCollection):
         if 'Description' in kwargs:
             self.Description = kwargs['Description']
 
-    def resolve_references(self, embed):
-        rc = ResourceCollection.resolve_references(self, embed)
+    def resolve_references(self):
+        rc = ResourceCollection.resolve_references(self)
         rc.update({'AWSTemplateFormatVersion': self.AWSTemplateFormatVersion})
         if self.Description:
             rc.update({'Description': self.Description})
         if self.Outputs:
-            outputs = resolve_references(self.Outputs, False)
+            outputs = resolve_references(self.Outputs)
             rc.update({'Outputs': outputs})
         return rc
 
@@ -132,13 +132,13 @@ class Property(object):
         self.value = value
 
     @_log_call
-    def resolve_references(self, embed):
+    def resolve_references(self):
         if isresource(self.value):
             result = self.value.ref()
         else:
             result = self.value
 
-        return resolve_references(result, embed)
+        return resolve_references(result)
 
 
 class Attribute(object):
@@ -151,8 +151,8 @@ class Attribute(object):
         return {'Fn::GetAtt': [self.resource.name, self.name]}
 
     @_log_call
-    def resolve_references(self, embed):
-        return resolve_references(self.ref(), True)
+    def resolve_references(self):
+        return resolve_references(self.ref())
 
     def __format__(self, format_string):
         if not self.resource or not self.resource.name:
@@ -232,9 +232,11 @@ class Resource(object):
         return '::'.join(parts)
 
     @_log_call
-    def resolve_references(self, embed):
-        if not embed:
-            return self.ref()
+    def resolve_references(self):
+        return self.ref()
+
+    @_log_call
+    def to_json(self):
         properties = dict((k, getattr(self, k)) for k in self._property_names)
         properties = dict((k, v) for (k, v) in properties.items() if v.value)
 
@@ -246,7 +248,7 @@ class Resource(object):
         result = dict(Type=self.type(), **attributes)
         if properties:
             result.update(Properties=properties)
-        return resolve_references(result, False)
+        return resolve_references(result)
 
     @_log_call
     def __setattr__(self, name, value):

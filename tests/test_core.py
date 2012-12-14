@@ -12,8 +12,7 @@ def assert_json(actual, expected):
     actual = to_json(actual)
     expected = json.dumps(expected, indent=2, sort_keys=True)
 
-    # unittest2 makes better diff for unicode
-    assert unicode(expected) ==  unicode(actual)
+    assert expected ==  actual
 
 
 
@@ -52,7 +51,7 @@ def test_resource_creation_with_attributes():
 
 def test_resource_with_attributes_to_json():
     r1 = ResourceWithAttributes(attr1='value')
-    assert_json(r1, {'Type':'ResourceWithAttributes', 'attr1':'value'})
+    assert_json(r1.to_json(), {'Type':'ResourceWithAttributes', 'attr1':'value'})
 
 def test_resource_creation_with_properties():
     r1 = ResourceWithProperties(prop1=1)
@@ -61,12 +60,12 @@ def test_resource_creation_with_properties():
 
 def test_resource_with_properties_to_json():
     r1 = ResourceWithProperties(prop1=1)
-    assert_json(r1, {'Type':'ResourceWithProperties', 'Properties': {'prop1':1}})
+    assert_json(r1.to_json(), {'Type':'ResourceWithProperties', 'Properties': {'prop1':1}})
 
 def test_setting_properties():
     r1 = ResourceWithProperties()
     r1.prop1 = 1
-    assert_json(r1, {'Type':'ResourceWithProperties', 'Properties': {'prop1':1}})
+    assert_json(r1.to_json(), {'Type':'ResourceWithProperties', 'Properties': {'prop1':1}})
 
 def test_stack_creation():
     r1 = ResourceWithProperties(prop1=1)
@@ -309,15 +308,15 @@ def test_format_with_colons_in_resource_names():
 
 def test_custom_property():
     class CustomProperty(Property):
-        def resolve_references(self, embed):
-            return {'Custom': resolve_references(self.value, False)}
+        def resolve_references(self):
+            return {'Custom': resolve_references(self.value)}
 
     class ResourceWithCustomProperty(Resource):
         __module__ = ''
         property = CustomProperty()
 
     r = ResourceWithCustomProperty('r', property='value')
-    assert_json(r, {
+    assert_json(r.to_json(), {
         'Type': 'ResourceWithCustomProperty',
         'Properties': {
             'property': {'Custom': 'value'}
@@ -342,7 +341,7 @@ def test_properties_and_resource_inheritance():
         __module__ = ''
 
     r = Resource2('r', prop1=1, prop2=2)
-    assert_json(r, {
+    assert_json(r.to_json(), {
         'Type':'Resource2',
         'Properties': {'prop1':1,'prop2':2}
         })
@@ -369,7 +368,7 @@ def test_stack_inheritance():
 def test_property_assignment():
     r = ResourceWithProperties(prop1='old value')
     r.prop1 = 'new value'
-    assert_json(r, {'Type':'ResourceWithProperties', 'Properties':{'prop1': 'new value'}})
+    assert_json(r.to_json(), {'Type':'ResourceWithProperties', 'Properties':{'prop1': 'new value'}})
 
 def test_defaults_assigning():
     class ResourceWithDefaults(Resource):
@@ -378,5 +377,5 @@ def test_defaults_assigning():
 
     ResourceWithDefaults.prop1 = 'default'
     r = ResourceWithDefaults()
-    assert_json(r, {'Type':'ResourceWithDefaults',
+    assert_json(r.to_json(), {'Type':'ResourceWithDefaults',
         'Properties':{'prop1': 'default'}})
