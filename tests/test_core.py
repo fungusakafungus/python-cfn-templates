@@ -15,8 +15,6 @@ def assert_json(actual, expected):
     assert expected ==  actual
 
 
-
-
 class Resource1(Resource):
     __module__=''
 

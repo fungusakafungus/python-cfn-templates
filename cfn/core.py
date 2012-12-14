@@ -48,7 +48,7 @@ _reference_regex = re.compile(r'''
         )
     }
     |
-    ( [^{]+ )
+    ( [^{]+ ) # not a reference
     ''', re.VERBOSE)
 
 
@@ -66,9 +66,7 @@ def resolve_references_in_string(a_string):
                 result.append({"Fn::GetAtt": [parts[1], parts[2]]})
     if len(result) == 1:
         return result[0]
-    elif len(result) == 0:
-        return a_string
-    else:
+    elif len(result) > 1:
         return cfn_join(result)
     return a_string
 
@@ -87,7 +85,7 @@ class ResourceCollection(object):
                 resources.append(resource)
         for r in resources:
             if not r.name:
-                for i in [''] + range(1,1000):
+                for i in [''] + range(1, 1000):
                     simple_type_name = re.split('::', r.type())[-1]
                     r.name = simple_type_name + str(i)
                     if r.name not in self.resources:
@@ -100,6 +98,7 @@ class ResourceCollection(object):
         if self.resources:
             result.update({'Resources': dict((k, v.to_json()) for k, v in self.resources.items())})
         return result
+
 
 class Stack(ResourceCollection):
     AWSTemplateFormatVersion = '2010-09-09'
@@ -156,15 +155,15 @@ class Attribute(object):
 
     def __format__(self, format_string):
         if not self.resource or not self.resource.name:
-            raise AttributeError( 'Referenced attribute '
-                    'does not belong to a resource with a name')
+            raise AttributeError('Referenced attribute '
+                                 'does not belong to a resource with a name')
         if not self.name:
             raise AttributeError(
-                    'Referenced attribute of resource {0} does not have a '
-                    'name'.format(self.resource.name))
+                'Referenced attribute of resource {0} does not have a '
+                'name'.format(self.resource.name))
         return '{{Attribute|{resource}|{attribute}}}'.format(
-                resource=self.resource.name,
-                attribute=self.name)
+            resource=self.resource.name,
+            attribute=self.name)
 
 
 def isresource(o):
@@ -184,7 +183,7 @@ class _ResourceMetaClass(type):
     def __setattr__(cls, name, value):
         if hasattr(cls, name) and isinstance(getattr(cls, name), Property):
             logging.debug('Setting default property {2} of class {0} to {1}', cls,
-                    name, value)
+                          name, value)
             getattr(cls, name).value = value
         else:
             type.__setattr__(cls, name, value)
@@ -214,7 +213,7 @@ class Resource(object):
             # copy the property from class to instance, setting the resource
             # to self. Copy is done by instantiating the propertys __class__
             setattr(self, name, value.__class__(resource=self,
-                value=value.value))
+                                                value=value.value))
 
         # put values from arguments into properties and attributes
         for k, v in properties_and_attributes.items():
@@ -260,11 +259,11 @@ class Resource(object):
     def __format__(self, format_string):
         if not self.name:
             raise AttributeError(
-                    'Referenced resource of type {0} does not have a name'.format(self.type()))
+                'Referenced resource of type {0} does not have a name'.format(self.type()))
         return '{{Resource|{0}}}'.format(self.name)
 
     def ref(self):
         if not self.name:
             raise AttributeError(
-                    'Referenced resource of type {0} does not have a name'.format(self.type()))
+                'Referenced resource of type {0} does not have a name'.format(self.type()))
         return {'Ref': self.name}
