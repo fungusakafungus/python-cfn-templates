@@ -2,6 +2,8 @@ This is a DSL for Amazon CloudFormation
 
 See tests and example-node.py for usage
 
+[![Build Status](https://travis-ci.org/fungusakafungus/python-cfn-templates.png?branch=master)](https://travis-ci.org/fungusakafungus/python-cfn-templates)
+
 Requirements
 ------------
 
