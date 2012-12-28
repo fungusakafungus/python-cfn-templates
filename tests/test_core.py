@@ -174,7 +174,7 @@ def test_join_in_property():
         })
 def test_stack_from_locals():
     r1 = Resource1('r1')
-    stack = ResourceCollection(locals())
+    stack = ResourceCollection(**locals())
     assert_json(stack, {
         'Resources': {
             'r1':{ 'Type': 'Resource1'},
@@ -183,7 +183,7 @@ def test_stack_from_locals():
 
 def test_stack_from_locals_with_unnamed_resources():
     r1 = Resource1()
-    stack = ResourceCollection(locals())
+    stack = ResourceCollection(**locals())
     assert_json(stack, {
         'Resources': {
             'r1':{ 'Type': 'Resource1'},
@@ -193,7 +193,7 @@ def test_stack_from_locals_with_unnamed_resources():
 def test_stack_from_mixed():
     r1 = Resource1()
     r2 = Resource1('RES2')
-    stack = ResourceCollection({'RES1':r1},r2)
+    stack = ResourceCollection(r2,RES1=r1)
     assert_json(stack, {
         'Resources': {
             'RES1':{ 'Type': 'Resource1'},
@@ -261,7 +261,7 @@ def test_attributes_in_metadata():
     r1 = ResourceWithAttributes(attr1='value')
     r2 = ResourceWithMetadata()
     r2.Metadata = {'key':r1.attr1}
-    stack = ResourceCollection(locals())
+    stack = ResourceCollection(**locals())
     assert_json(stack, {
         'Resources': {
             'r1':{ 'Type': 'ResourceWithAttributes', 'attr1':'value'},

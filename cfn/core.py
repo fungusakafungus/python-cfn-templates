@@ -5,6 +5,7 @@ import logging
 from functools import wraps
 from inspect import getmembers
 
+from cfn.util import Parameter
 
 def to_json(o):
     resolved = resolve_references(o)
@@ -74,17 +75,15 @@ def resolve_references_in_string(a_string):
 
 
 class ResourceCollection(object):
-    def __init__(self, *resources):
+    def __init__(self, *resources, **kwargs):
         self.resources = {}
-        dicts = [d for d in resources if isinstance(d, dict)]
         resources = [r for r in resources if isinstance(r, Resource)]
-        for arg in dicts:
-            for name, resource in arg.items():
-                if not isinstance(resource, Resource):
-                    continue
-                if not resource.name:
-                    resource.name = name
-                resources.append(resource)
+        for name, resource in kwargs.items():
+            if not isinstance(resource, Resource):
+                continue
+            if not resource.name:
+                resource.name = name
+            resources.append(resource)
         for r in resources:
             if not r.name:
                 for i in [''] + range(1, 1000):
@@ -103,11 +102,18 @@ class ResourceCollection(object):
 
 
 class Stack(ResourceCollection):
-    AWSTemplateFormatVersion = '2010-09-09'
-    Description = ''
-    Outputs = {}
-
     def __init__(self, *resources, **kwargs):
+        self.AWSTemplateFormatVersion = '2010-09-09'
+        self.Description = ''
+        self.Outputs = {}
+        self.Parameters = {}
+
+        for name, parameter in kwargs.items():
+            if not isinstance(parameter, Parameter):
+                continue
+            #if not parameter.name:
+            #    parameter.name = name
+            self.Parameters[name] = parameter
         ResourceCollection.__init__(self, *resources)
         if 'Description' in kwargs:
             self.Description = kwargs['Description']
@@ -117,6 +123,9 @@ class Stack(ResourceCollection):
         rc.update({'AWSTemplateFormatVersion': self.AWSTemplateFormatVersion})
         if self.Description:
             rc.update({'Description': self.Description})
+        if self.Parameters:
+            parameters = resolve_references(self.Parameters)
+            rc.update({'Parameters': parameters})
         if self.Outputs:
             outputs = resolve_references(self.Outputs)
             rc.update({'Outputs': outputs})

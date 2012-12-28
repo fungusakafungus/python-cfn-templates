@@ -28,5 +28,8 @@ It only contains a very small part of CloudFormation types
 Changelog
 ---------
 
+ - master
+  * updated example-node.py to use cfn.util.Facts
+  * changed stack (ResourceCollection, actually) creation from locals
  - 0.3.0
   * changed the way how to define custom properties, see `test_custom_property` in `tests/test_core.py`

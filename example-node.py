@@ -1,4 +1,5 @@
 from cfn.core import ResourceCollection, to_json
+from cfn.util import Facts
 import AWS
 import AWS.IAM
 import AWS.EC2
@@ -36,28 +37,19 @@ CFNInitUser.Policies = [policy]
 CFNKeys = AWS.IAM.AccessKey('CFNKeys')
 CFNKeys.UserName = 'CFNInitUser'
 instance = AWS.EC2.Instance('EC2Instance')
-facts = """
----
-role_basicnode: true
-server_role: basicnode
-ec2_provisioned_zone: {AvailabilityZone}
-ec2_provisioned_region: {AWS.Region}
-jimdo_environment: {Environment}
-puppet_environment: {PuppetEnvironment}
-device_data_volume: /dev/xvd{DataVolumeDevice}
-skip_monitoring: false
-service_name: {ServiceName}
-service_region_dns_name: {ServiceName}.{Environment}.{AWS.Region}.{HostedZone}.
-service_global_dns_name: {ServiceName}.{Environment}.{HostedZone}
+facts = Facts()
+facts['role_basicnode'] = True
+facts['server_role'] = 'basicnode'
+facts['ec2_provisioned_zone'] = AvailabilityZone
+facts['ec2_provisioned_region'] = AWS.Region
+facts['jimdo_environment'] = Environment
+facts['puppet_environment'] = PuppetEnvironment
+facts['device_data_volume'] = '/dev/xvd' + DataVolumeDevice
+facts['skip_monitoring'] = False
+facts['service_name'] = ServiceName
+facts['service_region_dns_name'] = '{ServiceName}.{Environment}.{AWS.Region}.{HostedZone}.'.format(**locals())
+facts['service_global_dns_name'] = '{ServiceName}.{Environment}.{HostedZone}'.format(**locals())
 
-""".format(
-        AvailabilityZone=AvailabilityZone,
-        AWS=AWS,
-        Environment=Environment,
-        PuppetEnvironment=PuppetEnvironment,
-        DataVolumeDevice=DataVolumeDevice,
-        ServiceName=ServiceName,
-        HostedZone=HostedZone)
 instance.Metadata = {
         "AWS::CloudFormation::Init" : {
             "config" : {
