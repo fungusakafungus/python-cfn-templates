@@ -102,19 +102,19 @@ class ResourceCollection(object):
 
 
 class Stack(ResourceCollection):
-    def __init__(self, *resources, **kwargs):
+    def __init__(self, *resources_and_parameters, **kwargs):
         self.AWSTemplateFormatVersion = '2010-09-09'
         self.Description = ''
         self.Outputs = {}
         self.Parameters = {}
 
-        for name, parameter in kwargs.items():
+        for name, parameter in kwargs.items() + [(p.name, p) for p in resources_and_parameters if isinstance(p, Parameter)]:
             if not isinstance(parameter, Parameter):
                 continue
-            #if not parameter.name:
-            #    parameter.name = name
+            if not parameter.name:
+                parameter.name = name
             self.Parameters[name] = parameter
-        ResourceCollection.__init__(self, *resources)
+        ResourceCollection.__init__(self, *resources_and_parameters)
         if 'Description' in kwargs:
             self.Description = kwargs['Description']
 

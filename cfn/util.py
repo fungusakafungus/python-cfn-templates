@@ -6,7 +6,7 @@ class Facts(dict):
 
 class Parameter(dict):
 
-    def __init__(self, **kwargs):
+    def __init__(self, name=None, **kwargs):
         """
         Type                    Yes     String, Number, or CommaDelimitedList.
                                         A parameter of type String is simply a literal string.
@@ -29,6 +29,8 @@ class Parameter(dict):
                                         cfn-create-stack:  Malformed input-Parameter MyParameter must only contain upper and lower case letters and numbers
 
         """
+        self.name = name
+
         known_args = ('Type', 'Default', 'NoEcho', 'AllowedValues',
                       'AllowedPattern', 'MaxLength', 'MinLength', 'MaxValue',
                       'MinValue', 'Description', 'ConstraintDescription',)
