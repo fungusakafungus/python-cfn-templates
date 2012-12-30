@@ -48,6 +48,11 @@ _reference_regex = re.compile(r'''
                 # ex.: {Resource|ResourceName}}
                 Resource \| [^|]+
             )
+            |
+            (?:
+                # ex.: {Parameter|param1}}
+                Parameter \| [^|]+
+            )
         )
     }
     |
@@ -63,7 +68,7 @@ def resolve_references_in_string(a_string):
             result.append(literal)
         if reference:
             parts = reference.split('|')
-            if parts[0] == 'Resource':
+            if parts[0] in ('Resource', 'Parameter'):
                 result.append({'Ref': parts[1]})
             else:
                 result.append({"Fn::GetAtt": [parts[1], parts[2]]})
@@ -113,8 +118,8 @@ class Stack(ResourceCollection):
                 continue
             if not parameter.name:
                 parameter.name = name
-            self.Parameters[name] = parameter
-        ResourceCollection.__init__(self, *resources_and_parameters)
+            self.Parameters[parameter.name] = parameter
+        ResourceCollection.__init__(self, *resources_and_parameters, **kwargs)
         if 'Description' in kwargs:
             self.Description = kwargs['Description']
 
@@ -124,8 +129,7 @@ class Stack(ResourceCollection):
         if self.Description:
             rc.update({'Description': self.Description})
         if self.Parameters:
-            parameters = resolve_references(self.Parameters)
-            rc.update({'Parameters': parameters})
+            rc.update({'Parameters': dict((k, dict(v)) for k, v in self.Parameters.items())})
         if self.Outputs:
             outputs = resolve_references(self.Outputs)
             rc.update({'Outputs': outputs})

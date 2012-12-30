@@ -1,7 +1,5 @@
 # -*- encoding: utf-8 -*-
 
-import pytest
-
 from cfn.core import Stack, Resource
 
 from tests.test_core import assert_json, ResourceWithAttributes, ResourceWithProperties
@@ -65,63 +63,3 @@ def test_outputs():
     })
 
 
-def test_parameters():
-    from cfn.util import Parameter
-    r = ResourceWithAttributes()
-    s = Stack(r, p=Parameter())
-    assert_json(s, {
-        'AWSTemplateFormatVersion': '2010-09-09',
-        'Parameters': {
-            'p': {
-            'Type': 'String'
-            }
-        },
-        'Resources': {
-            'ResourceWithAttributes': {
-                'Type': 'ResourceWithAttributes'
-            }
-        },
-    })
-
-
-def test_parameters2():
-    from cfn.util import Parameter
-    r = ResourceWithAttributes()
-    p = Parameter('param1')
-    s = Stack(r, p)
-    assert_json(s, {
-        'AWSTemplateFormatVersion': '2010-09-09',
-        'Parameters': {
-            'param1': {
-            'Type': 'String'
-            }
-        },
-        'Resources': {
-            'ResourceWithAttributes': {
-                'Type': 'ResourceWithAttributes'
-            }
-        },
-    })
-
-
-@pytest.mark.skipif('True')
-def test_parameters_referencing():
-    from cfn.util import Parameter
-    r = ResourceWithProperties()
-    p = Parameter()
-    r.prop1 = p
-    s = Stack(**locals())
-    assert_json(s, {
-        'AWSTemplateFormatVersion': '2010-09-09',
-        'Parameters': {
-            'p': {
-            'Type': 'String'
-            }
-        },
-        'Resources': {
-            'ResourceWithProperties': {
-                'Type': 'ResourceWithProperties',
-                'prop1': {'Ref': 'p'}
-            }
-        },
-    })

@@ -42,3 +42,11 @@ class Parameter(dict):
             kwargs['Type'] = 'String'
 
         dict.__init__(self, **kwargs)
+
+    def ref(self):
+        return {'Ref':self.name}
+
+    def __format__(self, format_string):
+        if not self.name:
+            raise AttributeError('Referenced parameter does not (yet?) have a name')
+        return '{{Parameter|{0}}}'.format(self.name)
