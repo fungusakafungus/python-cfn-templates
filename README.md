@@ -28,7 +28,7 @@ It only contains a very small part of CloudFormation types
 Changelog
 ---------
 
- - master
+ - 0.4.0
   * updated example-node.py to use cfn.util.Facts
   * changed stack (ResourceCollection, actually) creation from locals
  - 0.3.0
